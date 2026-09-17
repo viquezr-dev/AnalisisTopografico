@@ -20,14 +20,14 @@ email=viquezr@gmail.com
 
 [repository]
 type=GitHub
-url=https://github.com/your-username/analisis_nivelacion
+url=https://github.com/viquezr-dev/analisis_nivelacion
 
 [tracker]
 type=GitHub
-url=https://github.com/your-username/analisis_nivelacion/issues
+url=https://github.com/viquezr-dev/analisis_nivelacion/issues
 
 [homepage]
-url=https://github.com/your-username/analisis_nivelacion
+url=https://github.com/viquezr-dev/analisis_nivelacion
 
 [tags]
 topography,leveling,least squares,gaus-markov,adjustment,surveying,geodesy
