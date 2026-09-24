@@ -2,8 +2,8 @@
 
 [![QGIS](https://img.shields.io/badge/QGIS-3.16%2B-green.svg)](https://qgis.org)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-2.2.0-orange.svg)](https://github.com/viquezr-dev/analisis_nivelacion/releases)
-[![GitHub](https://img.shields.io/badge/GitHub-viquezr--dev-blue.svg)](https://github.com/viquezr-dev/analisis_nivelacion)
+[![Version](https://img.shields.io/badge/version-2.2.0-orange.svg)](https://github.com/viquezr-dev/AnalisisTopografico/releases)
+[![GitHub](https://img.shields.io/badge/GitHub-viquezr--dev-blue.svg)](https://github.com/viquezr-dev/AnalisisTopografico)
 
 A professional QGIS plugin for adjusting **topographic leveling networks** by the
 **least squares method (Gaus-Markov)**, with full quality control and a
@@ -83,7 +83,7 @@ publication-quality HTML report.
 
 ### Method 2 — Manual installation (development)
 
-1. Copy the folder `analisis_nivelacion/` to:
+1. Copy the folder `AnalisisTopografico/` to:
 
    - **Windows**: `%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\`
    - **Linux**: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/`
@@ -334,7 +334,7 @@ see the [LICENSE](LICENSE) file for details.
 **Raúl Víquez**
 Email: viquezr@gmail.com
 
-Repository: [https://github.com/viquezr-dev/analisis_nivelacion](https://github.com/viquezr-dev/analisis_nivelacion)
+Repository: [https://github.com/viquezr-dev/AnalisisTopografico](https://github.com/viquezr-dev/AnalisisTopografico)
 
 ---
 
