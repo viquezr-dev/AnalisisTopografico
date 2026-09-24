@@ -1,12 +1,13 @@
 [general]
-name=Leveling Analysis
+name=Análisis Topográfico
 qgisMinimumVersion=3.16
 qgisMaximumVersion=3.99
 description=Topographic leveling network adjustment by least squares (Gaus-Markov method).
-about=QGIS plugin for adjusting topographic leveling networks by the least squares method (Gaus-Markov). It performs data validation, computes adjusted elevations, residuals, posteriori variance, chi-square test, confidence intervals and Baarda's data snooping, and generates a professional HTML report with a scaled network sketch. Supports optional UTM coordinates to display results on the map. Exports results to GeoPackage and CSV.
+about=QGIS plugin for adjusting topographic leveling networks by the least squares method (Gaus-Markov). It performs data validation, computes adjusted elevations, residuals, posteriori variance, chi-square test, confidence intervals and Baarda data snooping, and generates a professional HTML report with a scaled network sketch. Supports optional UTM coordinates to display results on the map. Exports results to GeoPackage and CSV.
 version=2.2.0
-author=Raúl Víquez
+author=Raul Viquez
 email=viquezr@gmail.com
+tags=topography,leveling,least squares,gaus-markov,adjustment,surveying,geodesy
 changelog=2.2.0
   - Corrected variance-covariance matrices (Q_vv, Q_lhat)
   - Added UTM coordinate detection and scaled network sketch
@@ -15,19 +16,16 @@ changelog=2.2.0
   - Improved HTML report layout
 
 [author]
-name=Raúl Víquez
+name=Raul Viquez
 email=viquezr@gmail.com
 
 [repository]
 type=GitHub
-url=https://github.com/viquezr-dev/analisis_nivelacion
+url=https://github.com/viquezr-dev/AnalisisTopografico
 
 [tracker]
 type=GitHub
-url=https://github.com/viquezr-dev/analisis_nivelacion/issues
+url=https://github.com/viquezr-dev/AnalisisTopografico/issues
 
 [homepage]
-url=https://github.com/viquezr-dev/analisis_nivelacion
-
-[tags]
-topography,leveling,least squares,gaus-markov,adjustment,surveying,geodesy
+url=https://github.com/viquezr-dev/AnalisisTopografico

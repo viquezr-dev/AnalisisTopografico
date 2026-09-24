@@ -1,347 +1,220 @@
-# Leveling Analysis — QGIS Plugin
+# Topographic Analysis for QGIS
 
-[![QGIS](https://img.shields.io/badge/QGIS-3.16%2B-green.svg)](https://qgis.org)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/version-2.2.0-orange.svg)](https://github.com/viquezr-dev/AnalisisTopografico/releases)
-[![GitHub](https://img.shields.io/badge/GitHub-viquezr--dev-blue.svg)](https://github.com/viquezr-dev/AnalisisTopografico)
+**Topographic Analysis** is a QGIS plugin for adjusting differential leveling
+networks and performing two-dimensional Helmert coordinate transformations.
+It provides data validation, least-squares adjustment, statistical quality
+control, formatted reports, and GIS-ready result exports through a single
+graphical interface.
 
-A professional QGIS plugin for adjusting **topographic leveling networks** by the
-**least squares method (Gaus-Markov)**, with full quality control and a
-publication-quality HTML report.
+The plugin is intended for surveying, geodesy, cartography, engineering, and
+quality-control workflows in which observations must be checked before final
+coordinates or elevations are produced.
 
----
+**Official repository:**
+[github.com/viquezr-dev/AnalisisTopografico](https://github.com/viquezr-dev/AnalisisTopografico)
 
-## Table of Contents
+## Main features
 
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Input Data Format](#input-data-format)
-- [Usage](#usage)
-- [Output Files](#output-files)
-- [Methodology](#methodology)
-- [Quality Control](#quality-control)
-- [Changelog](#changelog)
-- [License](#license)
-- [Author](#author)
+### Differential leveling
 
----
+- Gauss-Markov least-squares adjustment.
+- Observation weights based on inverse distance (`1 / distance`).
+- Support for fixed benchmarks and unknown stations.
+- Standard convention: `H_final - H_initial = dh`.
+- Optional field convention: `H_initial - H_final = dh`.
+- Automatic checks for missing fields, invalid observations, duplicate lines,
+  disconnected networks, insufficient redundancy, and ill-conditioned normal
+  matrices.
+- Adjusted elevations, residuals, standard deviations, 95% confidence
+  intervals, redundancy values, standardized residuals, and observation
+  ranking.
+- Chi-square consistency test and warnings for suspicious observations.
 
-## Features
+### Helmert transformations
 
-- **Least squares adjustment (Gaus-Markov)** with weights `1 / distance`.
-- **Input validation** before processing:
-  - Required field detection.
-  - Network connectivity check (BFS).
-  - Duplicate observation detection.
-  - Fixed elevation presence.
-- **Optional UTM coordinates detection** (multiple aliases supported:
-  `X`, `Y`, `E`, `N`, `ESTE`, `NORTE`, `EAST`, `NORTH`, `UTM_X`, `UTM_Y`,
-  `COORD_X`, `COORD_Y`, etc.).
-- **Full statistical report**:
-  - Posteriori variance `σ₀²` and unit deviation `σ₀`.
-  - Global chi-square test (`χ²` at 95% confidence).
-  - Confidence intervals at 95% (Student's t).
-  - Redundancy number per observation (`rᵢ`).
-  - Standardized residuals (Baarda's data snooping, `|w| > 3.29`).
-  - Full variance-covariance matrices (`Q_vv` and `Q_lhat`).
-- **Professional HTML report**:
-  - Quality-control traffic light (semaphore).
-  - **Scaled network sketch in UTM coordinates** (or schematic circular
-    layout if no coordinates available).
-  - All design matrices (P, A, F, AT, ATPA, inverse of ATPA, ATPF).
-  - Residuals vector and complete final elevations table.
-  - Technical metadata block.
-- **Export options**:
-  - **GeoPackage** (`.gpkg`) with categorized styling (fixed = green,
-    unknown = blue).
-  - **CSV** with adjusted elevations, standard deviations, confidence
-    intervals, and UTM coordinates.
-- **Compact, professional interface** with pastel palette.
-- **No external dependencies** — works with the standard QGIS Python stack
-  (`numpy`). Optional `scipy` for more precise statistical tests (falls back
-  to an internal table if not available).
+- Four-parameter similarity transformation:
+  - two translations;
+  - one rotation;
+  - one uniform scale factor.
+- Six-parameter affine transformation:
+  - two translations;
+  - independent axis coefficients;
+  - rotation, scale, and shear effects.
+- Separate handling of control, verification, and transformation-only points.
+- Validation of duplicated coordinates, non-finite values, insufficient
+  control points, collinearity, rank, and matrix conditioning.
+- Parameter covariance, residual statistics, transformed coordinates, and
+  approximate error ellipses for control points.
 
----
+### Reports and exports
+
+- Detailed HTML reports.
+- Optional SVG sketches embedded in reports.
+- CSV output for adjusted results.
+- GeoPackage output with categorized QGIS symbology.
+- CSV export of adjustment matrices.
+- Built-in example templates for both supported workflows.
+- Automatic detection of the analysis mode from the input fields.
 
 ## Requirements
 
-- **QGIS ≥ 3.16** (tested up to 3.99).
-- `numpy` (bundled with QGIS).
-- `scipy` — **optional**, improves the accuracy of `χ²` and `t` distributions.
-  The plugin works without it using internal lookup tables.
+- QGIS 3.x.
+- Python 3 as supplied with QGIS.
+- NumPy.
+- SciPy is optional. If it is unavailable, the plugin uses internal
+  approximations for the statistical critical values.
 
----
+The plugin source follows Flake8 style requirements.
 
 ## Installation
 
-### Method 1 — QGIS Plugin Manager (once published)
+### From the QGIS Plugin Repository
 
-1. In QGIS: `Plugins → Manage and Install Plugins`.
-2. Search for **"Leveling Analysis"**.
-3. Click **Install**.
+1. Open QGIS.
+2. Select **Plugins > Manage and Install Plugins**.
+3. Search for **Topographic Analysis**.
+4. Select the plugin and click **Install Plugin**.
 
-### Method 2 — Manual installation (development)
+### Manual installation
 
-1. Copy the folder `AnalisisTopografico/` to:
+1. Download the plugin ZIP file from the
+   [GitHub repository](https://github.com/viquezr-dev/AnalisisTopografico)
+   or its
+   [Releases page](https://github.com/viquezr-dev/AnalisisTopografico/releases).
+2. In QGIS, open **Plugins > Manage and Install Plugins**.
+3. Select **Install from ZIP**.
+4. Choose the downloaded ZIP file and click **Install Plugin**.
+5. Open the plugin from the QGIS Plugins menu or its toolbar button.
 
-   - **Windows**: `%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\`
-   - **Linux**: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/`
-   - **macOS**: `~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/`
+Do not rename or remove the plugin's Python modules after installation. The
+main interface imports the Helmert calculation module from the same plugin
+directory.
 
-2. Restart QGIS.
-3. Enable the plugin in `Plugins → Manage and Install Plugins → Installed`.
+## Input data
 
-You will see a **Δ icon** in the toolbar and a menu entry under
-**Leveling Analysis**.
+Input data may be loaded in QGIS as a vector layer or a table without geometry.
+Field matching is case-insensitive.
 
----
+### Leveling fields
 
-## Input Data Format
+| Field | Description | Required |
+| --- | --- | --- |
+| `EST` | Observation or line identifier | Yes |
+| `C_FIJA` | Known elevation associated with the initial station | Yes |
+| `C_INICIAL` | Initial station identifier | Yes |
+| `C_FINAL` | Final station identifier | Yes |
+| `DIF_COTA` | Observed elevation difference in metres | Yes |
+| `DIST` | Observation distance in metres; must be greater than zero | Yes |
+| `X`, `Y` | Optional station coordinates used for mapping | No |
 
-The plugin reads a **CSV table** imported into QGIS as a vector/text layer.
-All fields must be **String type**. The table must contain at least the
-following columns:
+The network must be connected and must contain enough redundant observations
+to produce positive degrees of freedom. At least one fixed elevation must be
+provided.
 
-| Field | Description |
-|-------|-------------|
-| `EST` | Station number (row identifier). The fixed elevation in `C_FIJA` belongs to this station. |
-| `C_FIJA` | Fixed elevation (in meters). Leave empty if the station is unknown. |
-| `C_INICIAL` | Origin station of the observation. |
-| `C_FINAL` | Target station of the observation. |
-| `DIF_COTA` | Measured elevation difference (in meters). |
-| `DIST` | Distance (in km) used to compute the weight. |
+### Helmert fields
 
-### Optional coordinate columns
+| Field | Description | Required |
+| --- | --- | --- |
+| `PUNTO` | Point identifier | Yes |
+| `X_ORIGEN` | Source X coordinate | Yes |
+| `Y_ORIGEN` | Source Y coordinate | Yes |
+| `X_DESTINO` | Known target X coordinate | For control and verification points |
+| `Y_DESTINO` | Known target Y coordinate | For control and verification points |
+| `USO` | Point role: `Control` or `Verification` | Recommended |
 
-If your table also contains coordinates, the plugin will detect them
-automatically. Supported names (case-insensitive):
+Point behavior is determined as follows:
 
-| Coordinate X | Coordinate Y |
-|--------------|--------------|
-| `COORD_X`, `UTM_X`, `X_UTM`, `COORDENADA_X`, `ESTE`, `EAST`, `X`, `E` | `COORD_Y`, `UTM_Y`, `Y_UTM`, `COORDENADA_Y`, `NORTE`, `NORTH`, `Y`, `N` |
+| Role and coordinates | Behavior |
+| --- | --- |
+| `Control` with target coordinates | Included in the transformation adjustment |
+| `Verification` with target coordinates | Excluded from the adjustment and used for independent validation |
+| `Control` with empty target coordinates | Transformed after the parameters are calculated |
+| Empty `USO` value | Treated as `Control` |
 
-When coordinates are present, the plugin will:
-- Use them to place stations on the map.
-- Draw the network sketch in the HTML report **to scale**.
+The four-parameter model requires at least two control points. The
+six-parameter model requires at least three non-collinear control points.
+Additional control points are recommended so that residuals and adjustment
+quality can be evaluated statistically.
 
-### Example CSV
+## Basic workflow
 
-```csv
-EST,C_FIJA,C_INICIAL,C_FINAL,DIF_COTA,DIST,X,Y
-1,,1,2,5.507,0.327,500100.25,1100250.40
-2,54.808,2,3,1.728,0.460,500145.10,1100280.85
-3,,3,4,-6.798,0.496,500190.75,1100310.60
-4,49.738,4,5,-0.588,0.509,500235.10,1100340.20
-5,,5,6,5.081,0.519,500280.00,1100369.30
-6,54.232,7,6,-0.920,0.646,500200.40,1100420.10
-7,,1,7,5.851,0.383,500130.85,1100390.55
-8,52.637,8,4,-2.898,1.609,500050.20,1100300.75
-9,47.049,8,1,-3.335,0.501,500055.60,1100240.90
-10,,3,6,-2.304,0.381,500250.35,1100380.45
-11,,9,1,2.252,2.732,500090.10,1100215.30
+1. Load the input table or vector layer in QGIS.
+2. Open **Topographic Analysis**.
+3. Select **Leveling** or **Helmert** mode.
+4. Select the input layer.
+5. Configure the adjustment tolerances and report options.
+6. For Helmert processing, select the four- or six-parameter model.
+7. Click **Verify Data** and review the activity log.
+8. Click **Calculate Adjustment**.
+9. Generate the HTML report or export the results to GeoPackage, CSV, or
+   matrix CSV files.
+
+If you are preparing a dataset for the first time, use **Generate Example CSV
+Templates** in the plugin interface.
+
+## Output and quality control
+
+Depending on the selected mode, the plugin reports:
+
+- adjusted elevations or transformed coordinates;
+- residuals and standardized residuals;
+- posterior variance factor;
+- degrees of freedom;
+- covariance and standard-deviation information;
+- matrix condition diagnostics;
+- chi-square test results;
+- warnings for observations that exceed the configured tolerances;
+- independent verification-point differences;
+- transformation parameters and control-point error ellipses.
+
+Results should always be reviewed by a qualified surveying or geospatial
+professional before they are used in operational or legal work.
+
+## Source files
+
+- `nivelacion.py`: QGIS interface, leveling adjustment, validation, reporting,
+  and export functions.
+- `helmert.py`: numerical engine for four- and six-parameter transformations.
+
+The filenames inside the final plugin package should match the imports and the
+module names declared in the plugin package.
+
+## Development and validation
+
+To check the Python files locally:
+
+```bash
+python -m py_compile nivelacion.py helmert.py
+flake8 nivelacion.py helmert.py
 ```
 
----
+Testing should also be performed inside a supported QGIS installation because
+the graphical interface depends on PyQGIS and Qt components.
 
-## Usage
+## Contributing
 
-1. **Import the CSV** into QGIS:
-   - `Layer → Add Layer → Add Delimited Text Layer`
-   - Choose the CSV file, select **Tab** or **Comma** as separator.
-   - Choose **"No geometry (attribute only table)"**.
-   - Give the layer a name (any name; the plugin autodetects the required
-     columns).
+Bug reports, improvement proposals, and pull requests are welcome. Use the
+[GitHub issue tracker](https://github.com/viquezr-dev/AnalisisTopografico/issues)
+to report a problem. Include:
 
-2. **Open the plugin**:
-   - Click the **Δ** icon in the toolbar, or
-   - Menu: `Leveling Analysis → Leveling Analysis`.
-
-3. **Fill the form**:
-   - **Layer**: select the imported table.
-   - **Author**: your name (goes into the HTML report).
-   - **CRS**: the output coordinate system (default `EPSG:32617` —
-     WGS 84 / UTM zone 17N).
-
-4. **Run the workflow**:
-   - **1 · Verify data** → Validates fields, connectivity, duplicates.
-   - **2 · Compute adjustment** → Runs least squares; results appear in
-     the log.
-   - **3 · Generate HTML** → Choose the output path; the report opens
-     automatically in the browser.
-   - **Export GeoPackage** → Saves the adjusted points as a spatial layer.
-   - **Export CSV** → Saves the adjusted elevations with statistics.
-
-5. **View results**:
-   - The adjusted points are added to the QGIS map (green = fixed,
-     blue = unknown).
-   - The HTML report opens in the browser with the full statistical
-     report.
-
----
-
-## Output Files
-
-### HTML Report
-
-- Global summary (equations, unknowns, degrees of freedom, fixed
-  elevations, total measured elevations).
-- Quality-control semaphore (`σ₀`, max residual, max standardized
-  residual, χ² test, matrix condition).
-- **Scaled network sketch** in UTM.
-- Observation and residual table with redundancy number, standardized
-  residual, and quality flag.
-- Design matrices (P, A, F, AT, ATPA, ATPA⁻¹, ATPF).
-- Final elevations table (adjusted + fixed, with statistics).
-- Residual vector V.
-- Statistical control block (σ₀², σ₀, t₉₅, χ², p-value).
-- Variance-covariance matrices (`Σₓₓ`, `Q_l̂l̂`, `Q_vv`).
-- Standard deviations per station.
-- **Technical metadata block** with method, redundancy, date, and author.
-
-### GeoPackage (`.gpkg`)
-
-- Point layer with fields: `est`, `cota`, `desv`, `ic95`, `tipo`.
-- Categorized styling:
-  - 🟢 Green = fixed elevation.
-  - 🔵 Blue = adjusted (unknown) elevation.
-
-### CSV (`.csv`)
-
-- Columns: `EST`, `COTA_AJUSTADA`, `DESVIACION`, `IC95_INF`,
-  `IC95_SUP`, `TIPO`, and optionally `X_UTM`, `Y_UTM`.
-- Header comments with metadata (author, date, sigma, chi-square test).
-
----
-
-## Methodology
-
-The plugin implements the **Gaus-Markov model** for leveling networks:
-
-### Observation equation
-
-For each observation *i* connecting stations *a* and *b*:
-
-```
-Δh_i = H_b − H_a + v_i
-```
-
-### Weight matrix
-
-```
-P[i,i] = 1 / distance_i
-```
-
-### Least squares solution
-
-```
-X̂ = (Aᵀ P A)⁻¹ · Aᵀ P · f
-```
-
-Where:
-- **A** is the design matrix (`+1` for target station, `−1` for origin).
-- **f** is the reduced observation vector (`Δh − H_final + H_initial`).
-- **X̂** is the vector of adjusted unknown elevations.
-
-### Residuals and variance
-
-```
-V    = A · X̂ − f
-σ₀²  = Vᵀ P V / (n − u)
-```
-
-Where *n* is the number of equations and *u* the number of unknowns.
-
-### Variance-covariance matrices
-
-```
-Q_vv   = P⁻¹ − A · (AᵀPA)⁻¹ · Aᵀ · P⁻¹   (residuals)
-Q_l̂l̂  = A · (AᵀPA)⁻¹ · Aᵀ · P⁻¹          (adjusted observations)
-Σₓₓ    = σ₀² · (AᵀPA)⁻¹                  (parameters)
-```
-
----
-
-## Quality Control
-
-The plugin performs the following statistical checks and displays them as
-a colored semaphore:
-
-| Indicator | Criterion | Meaning |
-|-----------|-----------|---------|
-| **σ₀** | ≤ 3 mm (configurable) | Global accuracy of the adjustment |
-| **Max residual** | ≤ 5 mm (configurable) | Largest observation error |
-| **Max standardized residual** | ≤ 3.0 (configurable) | Baarda's data snooping threshold |
-| **Global χ² test** | χ²_obs ≤ χ²_tab (95%) | Model acceptability |
-| **Matrix condition** | < 1e10 | Numerical stability of ATPA |
-
-### Baarda's data snooping
-
-Each observation is tested using the **standardized residual**:
-
-```
-w_i = v_i / (σ₀ · √q_vv_ii)
-```
-
-- `|w| ≤ 3.0` → ✓ OK
-- `3.0 < |w| ≤ 3.29` → ⚠ Review
-- `|w| > 3.29` → ⚠ Outlier (α = 0.001)
-
----
-
-## Changelog
-
-### 2.2.0
-
-- **Fixed** variance-covariance matrices: `Q_vv` (residuals) and
-  `Q_lhat` (adjusted observations) are now correctly computed and
-  labeled.
-- **Fixed** sentinel values in GeoPackage export (explicit `float()`
-  conversion).
-- **Added** UTM coordinate detection with multiple field aliases.
-- **Added** scaled network sketch in the HTML report (uses real UTM
-  coordinates when available; falls back to a schematic circular layout).
-- **Added** GeoPackage export with categorized styling.
-- **Added** CSV export with adjusted elevations, confidence intervals,
-  and coordinates.
-- **Added** interval of confidence at 95% for adjusted elevations.
-- **Added** technical metadata block in HTML report.
-- **Added** quality-control traffic light (semaphore).
-- **Improved** HTML report layout: project name (short form),
-  matrix indices, complete final elevation table (fixed + unknown),
-  technical metadata.
-- **Improved** plugin interface: compact layout, pastel palette,
-  clear workflow buttons.
-
-### 2.0.0
-
-- First public release.
-- Least squares adjustment for leveling networks.
-- HTML report generation.
-- Support for up to 50 observations and 50 stations.
-
----
+- QGIS version;
+- operating system;
+- selected analysis mode and model;
+- input field structure;
+- steps needed to reproduce the issue;
+- relevant error messages, without confidential project data.
 
 ## License
 
-This plugin is licensed under the **GNU General Public License v3.0** —
-see the [LICENSE](LICENSE) file for details.
-
----
+This project is licensed under the **GNU General Public License v3.0**. See the
+`LICENSE` file for the complete license text.
 
 ## Author
 
-**Raúl Víquez**
-Email: viquezr@gmail.com
+**Raul Viquez**
 
-Repository: [https://github.com/viquezr-dev/AnalisisTopografico](https://github.com/viquezr-dev/AnalisisTopografico)
+## Disclaimer
 
----
-
-## Credits
-
-Originally based on a VBA macro for Excel. Ported to Python/QGIS and
-extended with modern statistical methods and reporting.
-
-Special thanks to the QGIS community for the excellent API and
-documentation.
+This software is provided without warranty. Users are responsible for
+verifying input data, adjustment settings, numerical results, coordinate
+reference systems, and final deliverables.
