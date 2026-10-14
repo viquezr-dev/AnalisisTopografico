@@ -6,6 +6,7 @@ import numpy as np
 
 _COND_MAX = 1.0e12
 _EPS = 1.0e-15
+_CHI2_2D_95_FACTOR = 2.447746830680816
 
 
 def _entradas(x_src, y_src, x_dst, y_dst, minimo, pesos=None):
@@ -170,7 +171,7 @@ def resumen_4p(res, nombres=None):
 
 
 def elipses_por_punto(res, nombres=None):
-    """Calcula elipses de error aproximadas en puntos de control."""
+    """Calcula elipses de error de 1 sigma y de confianza al 95 %."""
     salida = []
     for i in range(int(res["n"])):
         A_i = res["A"][2 * i:2 * i + 2, :]
@@ -181,9 +182,18 @@ def elipses_por_punto(res, nombres=None):
         valores = np.clip(valores[orden], 0.0, None)
         vector = vectores[:, orden[-1]]
         azimut = math.atan2(vector[0], vector[1]) % (2 * math.pi)
-        salida.append({"n": i,
-                       "name": nombres[i] if nombres else f"P{i + 1}",
-                       "a": math.sqrt(valores[-1]),
-                       "b": math.sqrt(valores[0]),
-                       "az_deg": math.degrees(azimut)})
+        a_1sigma = math.sqrt(valores[-1])
+        b_1sigma = math.sqrt(valores[0])
+        salida.append({
+            "n": i,
+            "name": nombres[i] if nombres else f"P{i + 1}",
+            "a": a_1sigma,
+            "b": b_1sigma,
+            "a_1sigma": a_1sigma,
+            "b_1sigma": b_1sigma,
+            "a_95": a_1sigma * _CHI2_2D_95_FACTOR,
+            "b_95": b_1sigma * _CHI2_2D_95_FACTOR,
+            "factor_95": _CHI2_2D_95_FACTOR,
+            "az_deg": math.degrees(azimut),
+        })
     return salida

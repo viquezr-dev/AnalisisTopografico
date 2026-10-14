@@ -44,12 +44,16 @@ coordinates or elevations are produced.
 - Validation of duplicated coordinates, non-finite values, insufficient
   control points, collinearity, rank, and matrix conditioning.
 - Parameter covariance, residual statistics, transformed coordinates, and
-  approximate error ellipses for control points.
+  error ellipses for control points at both 1-sigma and 95% confidence.
+- Graphical 95% confidence ellipses in the SVG sketch, with the display
+  magnification reported explicitly in the figure.
 
 ### Reports and exports
 
 - Detailed HTML reports.
 - Optional SVG sketches embedded in reports.
+- Native QGIS CRS selector with access to the complete QGIS CRS database,
+  including user-defined coordinate reference systems.
 - CSV output for adjusted results.
 - GeoPackage output with categorized QGIS symbology.
 - CSV export of adjustment matrices.
@@ -165,7 +169,8 @@ Depending on the selected mode, the plugin reports:
 - chi-square test results;
 - warnings for observations that exceed the configured tolerances;
 - independent verification-point differences;
-- transformation parameters and control-point error ellipses.
+- transformation parameters and control-point error ellipses at 1-sigma and
+  95% confidence.
 
 Results should always be reviewed by a qualified surveying or geospatial
 professional before they are used in operational or legal work.

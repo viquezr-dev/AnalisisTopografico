@@ -34,8 +34,10 @@ from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsPointXY,
     QgsField, QgsFields, QgsVectorFileWriter,
     QgsCoordinateTransformContext, QgsMarkerSymbol,
-    QgsCategorizedSymbolRenderer, QgsRendererCategory
+    QgsCategorizedSymbolRenderer, QgsRendererCategory,
+    QgsCoordinateReferenceSystem
 )
+from qgis.gui import QgsProjectionSelectionWidget
 
 # Importación del motor matemático (mismo directorio)
 try:
@@ -739,12 +741,17 @@ class DialogoTopografico(QDialog):
         self.txt_autor.setPlaceholderText("Nombre de quien realiza el cálculo")
         meta.addRow("Autor:", self.txt_autor)
 
-        self.cmb_crs = QComboBox()
-        self.cmb_crs.setEditable(True)
-        self.cmb_crs.setInsertPolicy(QComboBox.NoInsert)
-        self.cmb_crs.setMinimumHeight(30)
-        self._cargar_crs_comunes()
-        meta.addRow("CRS de salida:", self.cmb_crs)
+        self.selector_crs = QgsProjectionSelectionWidget()
+        self.selector_crs.setMinimumHeight(30)
+        self.selector_crs.setToolTip(
+            "Seleccione cualquier CRS disponible en QGIS. "
+            "Se utiliza para las capas y archivos de salida."
+        )
+        crs_inicial = QgsProject.instance().crs()
+        if not crs_inicial.isValid():
+            crs_inicial = QgsCoordinateReferenceSystem("EPSG:4326")
+        self.selector_crs.setCrs(crs_inicial)
+        meta.addRow("CRS de salida:", self.selector_crs)
 
         datos.addWidget(grp_meta)
         datos.addStretch(1)
@@ -1025,29 +1032,26 @@ class DialogoTopografico(QDialog):
         self.btn_matrices.clicked.connect(self._exportar_matrices_csv)
 
         # --------------------------------------------------------
-    def _cargar_crs_comunes(self):
-        opciones = [
-            ("EPSG:32617", "WGS 84 / UTM zone 17N (Panamá)"),
-            ("EPSG:32616", "WGS 84 / UTM zone 16N"),
-            ("EPSG:32618", "WGS 84 / UTM zone 18N"),
-            ("EPSG:32619", "WGS 84 / UTM zone 19N"),
-            ("EPSG:32615", "WGS 84 / UTM zone 15N"),
-            ("EPSG:32620", "WGS 84 / UTM zone 20N"),
-            ("EPSG:4326", "WGS 84 (lat/lon)"),
-            ("EPSG:5367", "CRTM05 Costa Rica"),
-        ]
-        for codigo, nombre in opciones:
-            self.cmb_crs.addItem(f"{codigo} — {nombre}", codigo)
-        self.cmb_crs.setCurrentIndex(0)
+    def _crs_objeto_seleccionado(self):
+        """Devuelve el CRS elegido en el selector nativo de QGIS."""
+        crs = self.selector_crs.crs()
+        if crs.isValid():
+            return crs
+
+        crs_proyecto = QgsProject.instance().crs()
+        if crs_proyecto.isValid():
+            return crs_proyecto
+
+        return QgsCoordinateReferenceSystem("EPSG:4326")
 
     def _crs_seleccionado(self):
-        data = self.cmb_crs.currentData()
-        if data:
-            return data
-        txt = self.cmb_crs.currentText().strip()
-        if "—" in txt:
-            txt = txt.split("—")[0].strip()
-        return txt or "EPSG:32617"
+        """Devuelve una etiqueta breve del CRS para reportes y mensajes."""
+        crs = self._crs_objeto_seleccionado()
+        authid = crs.authid()
+        descripcion = crs.description()
+        if authid and descripcion:
+            return f"{authid} — {descripcion}"
+        return authid or descripcion or "CRS personalizado de QGIS"
 
     # --------------------------------------------------------
     #  LOG Y PROGRESO
@@ -2017,12 +2021,12 @@ class DialogoTopografico(QDialog):
     # --------------------------------------------------------
     def _capa_ajustada(self):
         res = self.res
-        crs = self._crs_seleccionado()
+        crs = self._crs_objeto_seleccionado()
 
-        capa = QgsVectorLayer(f"Point?crs={crs}",
-                              "nivelacion_ajustada", "memory")
+        capa = QgsVectorLayer("Point", "nivelacion_ajustada", "memory")
         if not capa.isValid():
-            raise ValueError(f"No se pudo crear capa con CRS '{crs}'.")
+            raise ValueError("No se pudo crear la capa de nivelación.")
+        capa.setCrs(crs)
 
         prov = capa.dataProvider()
         campos = QgsFields()
@@ -2088,12 +2092,12 @@ class DialogoTopografico(QDialog):
     # --------------------------------------------------------
     def _capa_ajustada_helmert(self):
         res = self.res_helmert
-        crs = self._crs_seleccionado()
+        crs = self._crs_objeto_seleccionado()
 
-        capa = QgsVectorLayer(f"Point?crs={crs}",
-                              "helmert_ajustada", "memory")
+        capa = QgsVectorLayer("Point", "helmert_ajustada", "memory")
         if not capa.isValid():
-            raise ValueError(f"No se pudo crear capa con CRS '{crs}'.")
+            raise ValueError("No se pudo crear la capa Helmert.")
+        capa.setCrs(crs)
 
         prov = capa.dataProvider()
         campos = QgsFields()
@@ -2592,7 +2596,6 @@ class DialogoTopografico(QDialog):
         capa = self.capa_src
         crs_src = capa.crs().authid() if capa else ""
         crs_out = self._crs_seleccionado()
-        crs = crs_src if crs_src else f"{crs_out} (salida)"
         proy_path = QgsProject.instance().fileName() or "(sin guardar)"
         proy = (os.path.basename(proy_path)
                 if proy_path and proy_path != "(sin guardar)"
@@ -2802,7 +2805,8 @@ class DialogoTopografico(QDialog):
   <b>Calculado por:</b> {autor}<br>
   <b>Fecha:</b> {datetime.now():%Y-%m-%d %H:%M:%S}<br>
   <b>Proyecto:</b> <span title="{proy_path}">{proy}</span><br>
-  <b>Sistema de referencia:</b> {crs}<br>
+  <b>CRS de entrada:</b> {crs_src or 'No definido'}<br>
+  <b>CRS de salida:</b> {crs_out}<br>
   <b>Capa fuente:</b> {capa.name() if capa else 'N/A'}
   ({capa.featureCount() if capa else 0} filas)<br>
   <b>Coordenadas UTM:</b>
@@ -3111,7 +3115,6 @@ class DialogoTopografico(QDialog):
         capa = self.capa_src
         crs_src = capa.crs().authid() if capa else ""
         crs_out = self._crs_seleccionado()
-        crs = crs_src if crs_src else f"{crs_out} (salida)"
         proy_path = QgsProject.instance().fileName() or "(sin guardar)"
         proy = (os.path.basename(proy_path)
                 if proy_path and proy_path != "(sin guardar)"
@@ -3327,7 +3330,8 @@ class DialogoTopografico(QDialog):
   <b>Calculado por:</b> {autor}<br>
   <b>Fecha:</b> {datetime.now():%Y-%m-%d %H:%M:%S}<br>
   <b>Proyecto:</b> <span title="{proy_path}">{proy}</span><br>
-  <b>Sistema de referencia (salida):</b> {crs}<br>
+  <b>CRS de entrada:</b> {crs_src or 'No definido'}<br>
+  <b>CRS de salida:</b> {crs_out}<br>
   <b>Capa fuente:</b> {capa.name() if capa else 'N/A'}
   ({capa.featureCount() if capa else 0} filas)<br>
   <b>Modelo:</b>
@@ -3449,16 +3453,26 @@ class DialogoTopografico(QDialog):
         # ---- Elipses de error por punto ----
         try:
             elipses = helmert.elipses_por_punto(res, res["_nombres"])
-            H.append('<h2>ERROR CIRCULAR EN PUNTOS DE CONTROL</h2>')
+            H.append('<h2>ELIPSES DE ERROR EN PUNTOS DE CONTROL</h2>')
+            H.append(
+                '<p>Los semiejes de confianza al 95 % se obtienen '
+                'multiplicando los semiejes de 1σ por '
+                '√χ²(2; 0.95) = 2.4477. Una elipse pequeña indica '
+                'mayor precisión; una elipse alargada indica menor '
+                'precisión en la dirección de su eje mayor.</p>')
             H.append('<table class="datos">'
-                     '<tr><th>NAME</th><th>a (m)</th><th>b (m)</th>'
+                     '<tr><th>PUNTO</th>'
+                     '<th>a 1σ</th><th>b 1σ</th>'
+                     '<th>a 95 %</th><th>b 95 %</th>'
                      '<th>Azimut (°)</th><th>Nota</th></tr>')
             for el in elipses:
                 nota = "circular" if abs(
                     el["a"] - el["b"]) < 1e-9 else "elíptico"
                 H.append(f'<tr><td>{el["name"]}</td>'
-                         f'<td>{el["a"] * 1000:.4f} mm</td>'
-                         f'<td>{el["b"] * 1000:.4f} mm</td>'
+                         f'<td>{el["a_1sigma"] * 1000:.4f} mm</td>'
+                         f'<td>{el["b_1sigma"] * 1000:.4f} mm</td>'
+                         f'<td>{el["a_95"] * 1000:.4f} mm</td>'
+                         f'<td>{el["b_95"] * 1000:.4f} mm</td>'
                          f'<td>{el["az_deg"]:.3f}</td>'
                          f'<td>{nota}</td></tr>')
             H.append('</table>')
@@ -3532,7 +3546,8 @@ class DialogoTopografico(QDialog):
             H.append(self._croquis_svg_helmert(res))
             H.append('<p style="font-size:14px;color:#666;">'
                      '● Verde: control &nbsp; ■ Azul: verificación &nbsp; '
-                     '▲ Naranja: transformado</p>')
+                     '▲ Naranja: transformado &nbsp; '
+                     '⬭ Verde discontinuo: elipse de confianza 95 %</p>')
 
         # ---- Matrices ----
         UMBRAL_MATRICES_HELM = 15
@@ -3655,6 +3670,14 @@ class DialogoTopografico(QDialog):
         alto = ymax - ymin
         escala = min((W - 2 * M) / ancho, (H - 2 * M) / alto)
 
+        elipses = helmert.elipses_por_punto(res, res["_nombres"])
+        max_a_95 = max((el["a_95"] for el in elipses), default=0.0)
+        objetivo_px = 28.0
+        if max_a_95 > 0.0:
+            magnificacion = objetivo_px / (max_a_95 * escala)
+        else:
+            magnificacion = 1.0
+
         def proy(x, y):
             px = M + (x - xmin) * escala
             py = H - M - (y - ymin) * escala
@@ -3663,6 +3686,21 @@ class DialogoTopografico(QDialog):
         svg = ['<svg xmlns="http://www.w3.org/2000/svg" '
                'width="640" height="640" '
                'style="border:1px solid #ccc; background:#fafafa;">']
+
+        # Las elipses se dibujan primero para mantener visibles los puntos.
+        for i, el in enumerate(elipses):
+            px, py = proy(float(res["_x_dst"][i]),
+                          float(res["_y_dst"][i]))
+            rx = max(el["a_95"] * escala * magnificacion, 0.6)
+            ry = max(el["b_95"] * escala * magnificacion, 0.6)
+            giro_svg = el["az_deg"] - 90.0
+            svg.append(
+                f'<ellipse cx="{px:.1f}" cy="{py:.1f}" '
+                f'rx="{rx:.2f}" ry="{ry:.2f}" '
+                f'transform="rotate({giro_svg:.3f} {px:.1f} {py:.1f})" '
+                'fill="#e8f5e9" fill-opacity="0.38" '
+                'stroke="#1b5e20" stroke-width="1.2" '
+                'stroke-dasharray="4 2"/>')
 
         for x, y, name, tipo in pts:
             px, py = proy(x, y)
@@ -3693,6 +3731,10 @@ class DialogoTopografico(QDialog):
 
         svg.append('<text x="10" y="20" fill="#666" font-size="10">'
                    'Croquis · coordenadas destino</text>')
+        svg.append(
+            '<text x="10" y="36" fill="#1b5e20" font-size="10">'
+            'Elipses de confianza 95 % · magnificación gráfica '
+            f'×{magnificacion:.2g}</text>')
         svg.append('</svg>')
         return "\n".join(svg)
 
@@ -3871,9 +3913,9 @@ class DialogoTopografico(QDialog):
                 "Verificación",
                 "V2,662700.000,998600.000,664174.5000,997795.5000,"
                 "Verificación",
-                "PT1,662480.666,998413.879,,,Control",
-                "PT2,662543.662,998732.545,,,Control",
-                "PT3,662154.764,998359.366,,,Control",
+                "FIC1,662480.666,998413.879,,,Control",
+                "FIC2,662543.662,998732.545,,,Control",
+                "FIC3,662154.764,998359.366,,,Control",
             ]
             with open(ruta_helm, "w", encoding="utf-8", newline="\n") as fh:
                 fh.write("\n".join(lineas_helm) + "\n")
