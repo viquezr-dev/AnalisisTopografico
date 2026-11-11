@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Plugin: Análisis Topográfico  ·  v3.1
+Plugin: Análisis Topográfico  ·  v3.1.1
 Autor:  Raul Viquez
 Licencia: GPL v3
 
@@ -15,7 +15,6 @@ Detección informativa del modo según los campos de la capa:
 
 import os
 import math
-import webbrowser
 from datetime import datetime
 
 import numpy as np
@@ -27,8 +26,8 @@ from qgis.PyQt.QtWidgets import (
     QProgressBar, QCheckBox, QWidget, QRadioButton,
     QButtonGroup, QSizePolicy, QFrame, QTabWidget
 )
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtCore import Qt, QVariant
+from qgis.PyQt.QtGui import QDesktopServices, QIcon
+from qgis.PyQt.QtCore import Qt, QUrl, QVariant
 
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsPointXY,
@@ -57,7 +56,7 @@ def _to_float(s):
         return None
     try:
         return float(s.replace(",", "."))
-    except BaseException:
+    except (TypeError, ValueError):
         return None
 
 
@@ -587,7 +586,7 @@ class DialogoTopografico(QDialog):
     def __init__(self, iface, parent=None):
         super().__init__(parent or iface.mainWindow())
         self.iface = iface
-        self.setWindowTitle("Análisis Topográfico  ·  v3.1")
+        self.setWindowTitle("Análisis Topográfico  ·  v3.1.1")
         self.setStyleSheet(QSS)
         self.setMinimumWidth(640)
         self.setMaximumWidth(780)
@@ -628,12 +627,12 @@ class DialogoTopografico(QDialog):
         # ----------------------------------------------------
         titulo = QLabel("ANÁLISIS TOPOGRÁFICO")
         titulo.setObjectName("titulo")
-        titulo.setAlignment(Qt.AlignCenter)
+        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(titulo)
 
-        subtitulo = QLabel("v3.1 · Nivelación y Transformación Helmert")
+        subtitulo = QLabel("v3.1.1 · Nivelación y Transformación Helmert")
         subtitulo.setObjectName("subtitulo")
-        subtitulo.setAlignment(Qt.AlignCenter)
+        subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(subtitulo)
 
         # ----------------------------------------------------
@@ -682,7 +681,7 @@ class DialogoTopografico(QDialog):
         lbl_capa = QLabel("Tabla / capa:")
         self.cmb_capa = QComboBox()
         self.cmb_capa.setEditable(True)
-        self.cmb_capa.setInsertPolicy(QComboBox.NoInsert)
+        self.cmb_capa.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.cmb_capa.setMinimumHeight(30)
         self.cmb_capa.setToolTip(
             "Seleccione la tabla o capa vectorial que contiene los datos "
@@ -849,7 +848,7 @@ class DialogoTopografico(QDialog):
 
         # ---- Reporte
         sep = QFrame()
-        sep.setFrameShape(QFrame.HLine)
+        sep.setFrameShape(QFrame.Shape.HLine)
         sep.setObjectName("linea")
         vp.addWidget(sep)
 
@@ -903,7 +902,7 @@ class DialogoTopografico(QDialog):
         self.txt_log.setReadOnly(True)
         self.txt_log.setMinimumHeight(145)
         self.txt_log.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Expanding
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         vlog.addWidget(self.txt_log, 1)
 
@@ -1277,7 +1276,7 @@ class DialogoTopografico(QDialog):
         self._log(f"✓ {len(obs)} observaciones válidas leídas.", "#1e8449")
         self._set_progress(55)
 
-        cotas_fijas = {o["est"]: o["cota_fija"]
+        cotas_fijas = {o.get("est_fija", o["ini"]): o["cota_fija"]
                        for o in obs if o["cota_fija"] is not None}
 
         huerfanas_usadas = []
@@ -1423,12 +1422,14 @@ class DialogoTopografico(QDialog):
                 x_val = _to_float(a[i_x])
                 y_val = _to_float(a[i_y])
                 if x_val is not None and y_val is not None:
-                    coords[est] = (x_val, y_val)
+                    coords[ini] = (x_val, y_val)
 
+            est_fija = ini
             if invertir:
                 ini, fin = fin, ini
 
             obs.append({"est": est, "cota_fija": cf,
+                        "est_fija": est_fija,
                         "ini": ini, "fin": fin,
                         "dh": dh, "dist": dis})
 
@@ -1770,7 +1771,7 @@ class DialogoTopografico(QDialog):
         tol_resid = self.sp_resid.value()
         tol_vstd = self.sp_vstd.value()
 
-        cotas_fijas = {o["est"]: o["cota_fija"]
+        cotas_fijas = {o.get("est_fija", o["ini"]): o["cota_fija"]
                        for o in obs if o["cota_fija"] is not None}
 
         # Fusionar cotas huérfanas
@@ -1828,14 +1829,15 @@ class DialogoTopografico(QDialog):
         desv = np.sqrt(np.diag(Sigma_XX))
 
         Q = np.linalg.inv(P)
-        A_Ninv_AtQ = A @ INVATPA @ A.T @ Q
-        Q_vv = sigma2 * (Q - A_Ninv_AtQ)
-        Q_lhat = sigma2 * A_Ninv_AtQ
+        # Covariance of adjusted observations and residuals.
+        A_Ninv_At = A @ INVATPA @ A.T
+        Q_vv = sigma2 * (Q - A_Ninv_At)
+        Q_lhat = sigma2 * A_Ninv_At
 
         H_ii = np.diag(A @ INVATPA @ A.T @ P)
         r_i = 1.0 - H_ii
 
-        sd_V = np.sqrt(np.diag(Q_vv))
+        sd_V = np.sqrt(np.clip(np.diag(Q_vv), 0.0, None))
         sd_V = np.where(sd_V > 1e-15, sd_V, np.nan)
         with np.errstate(invalid="ignore", divide="ignore"):
             v_std = V / sd_V
@@ -2006,7 +2008,7 @@ class DialogoTopografico(QDialog):
                 fh.write(html)
             self._log(f"✓ HTML guardado: {ruta}", "#1e8449")
             if self.chk_abrirlo.isChecked():
-                webbrowser.open(f"file:///{ruta.replace(os.sep, '/')}")
+                QDesktopServices.openUrl(QUrl.fromLocalFile(ruta))
             QMessageBox.information(self, "Reporte generado",
                                     f"Guardado en:\n{ruta}")
         except Exception as e:
@@ -2816,7 +2818,7 @@ class DialogoTopografico(QDialog):
   {'Campo — H_ini − H_fin = dh (swap automático)'
             if self.chk_invertir.isChecked()
             else 'Estándar — H_fin − H_ini = dh'}<br>
-  <b>Generado por:</b> Plugin Análisis Topográfico v3.1
+  <b>Generado por:</b> Plugin Análisis Topográfico v3.1.1
 </div>
 
 <h2>RESUMEN</h2>
@@ -3097,7 +3099,7 @@ class DialogoTopografico(QDialog):
 <h2>FIN DEL PROCESO</h2>
 <a class="inicio" href="#inicio">↑ IR AL INICIO</a>
 <div class="footer">
-  Generado con QGIS + Python · Plugin Análisis Topográfico v3.1 ·
+  Generado con QGIS + Python · Plugin Análisis Topográfico v3.1.1 ·
   Ajuste Gaus-Markov · {datetime.now():%Y-%m-%d %H:%M:%S}
 </div>
 </body></html>""")
@@ -3165,7 +3167,7 @@ class DialogoTopografico(QDialog):
         sem.append(("Residuo máx = " + f"{vmax * 1000:.3f} mm",
                     "ok" if vmax < self.sp_resid.value() else "alerta"))
         try:
-            # El motor v3.1 devuelve la condición de la matriz escalada,
+            # El motor v3.1.1 devuelve la condición de la matriz escalada,
             # más representativa para coordenadas UTM grandes.
             cond = float(res.get("cond", np.linalg.cond(res["ATPA"])))
         except Exception:
@@ -3343,7 +3345,7 @@ class DialogoTopografico(QDialog):
   <b>Puntos transformados:</b> {len(self.pts_a_transf)} (sin X_DST/Y_DST)<br>
   <b>Total de puntos procesados:</b>
   {int(n) + len(self.pts_verificacion) + len(self.pts_a_transf)}<br>
-  <b>Generado por:</b> Plugin Análisis Topográfico v3.1
+  <b>Generado por:</b> Plugin Análisis Topográfico v3.1.1
 </div>
 
 <h2>RESUMEN</h2>
@@ -3622,7 +3624,7 @@ class DialogoTopografico(QDialog):
 <h2>FIN DEL PROCESO</h2>
 <a class="inicio" href="#inicio">↑ IR AL INICIO</a>
 <div class="footer">
-  Generado con QGIS + Python · Plugin Análisis Topográfico v3.1 ·
+  Generado con QGIS + Python · Plugin Análisis Topográfico v3.1.1 ·
   Transformación Helmert · {datetime.now():%Y-%m-%d %H:%M:%S}
 </div>
 </body></html>""")
@@ -3750,7 +3752,7 @@ class DialogoTopografico(QDialog):
             proy_dir = os.path.expanduser("~")
         carpeta = os.path.join(proy_dir, "reportes_topografia")
         os.makedirs(carpeta, exist_ok=True)
-        webbrowser.open(f"file:///{carpeta.replace(os.sep, '/')}")
+        QDesktopServices.openUrl(QUrl.fromLocalFile(carpeta))
 
     # --------------------------------------------------------
     #  Limpiar estado
@@ -3965,8 +3967,7 @@ class DialogoTopografico(QDialog):
 
             # Abrir carpeta en el explorador
             try:
-                webbrowser.open(
-                    f"file:///{carpeta.replace(os.sep, '/')}")
+                QDesktopServices.openUrl(QUrl.fromLocalFile(carpeta))
             except Exception:
                 pass
 

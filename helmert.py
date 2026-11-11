@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Transformaciones Helmert 2D (similitud 4p y afín 6p) · v3.1."""
+"""Transformaciones Helmert 2D (similitud 4p y afín 6p) · v3.1.1."""
 
 import math
 import numpy as np
@@ -63,7 +63,11 @@ def _resolver(A, L, pesos, parametros):
     P = np.diag(p_diag)
     ATPA = A.T @ P @ A
     ATPL = A.T @ P @ L
-    INV_ATPA = np.linalg.pinv(ATPA, rcond=1.0e-15, hermitian=True)
+    # Recover the normal inverse in the original parameter units.
+    # Inverting raw UTM normal equations can discard translation modes.
+    _, sv, vt = np.linalg.svd(Aw, full_matrices=False)
+    inv_scaled = (vt.T / (sv * sv)) @ vt
+    INV_ATPA = inv_scaled / np.outer(escalas, escalas)
     VTPV = float(V.T @ P @ V)
     gl = len(L) - parametros
     sigma2 = VTPV / gl if gl > 0 else 0.0

@@ -1,6 +1,6 @@
 # Topographic Analysis for QGIS
 
-**Topographic Analysis** is a QGIS plugin for adjusting differential leveling
+**Análisis Topográfico (Topographic Analysis), version 3.1.1**, is a QGIS plugin for adjusting differential leveling
 networks and performing two-dimensional Helmert coordinate transformations.
 It provides data validation, least-squares adjustment, statistical quality
 control, formatted reports, and GIS-ready result exports through a single
@@ -62,7 +62,7 @@ coordinates or elevations are produced.
 
 ## Requirements
 
-- QGIS 3.x.
+- QGIS 3.16–3.99 (QGIS 4 compatibility is not declared).
 - Python 3 as supplied with QGIS.
 - NumPy.
 - SciPy is optional. If it is unavailable, the plugin uses internal
@@ -76,7 +76,7 @@ The plugin source follows Flake8 style requirements.
 
 1. Open QGIS.
 2. Select **Plugins > Manage and Install Plugins**.
-3. Search for **Topographic Analysis**.
+3. Search for **Análisis Topográfico**.
 4. Select the plugin and click **Install Plugin**.
 
 ### Manual installation
@@ -189,8 +189,8 @@ module names declared in the plugin package.
 To check the Python files locally:
 
 ```bash
-python -m py_compile nivelacion.py helmert.py
-flake8 nivelacion.py helmert.py
+python -m py_compile __init__.py nivelacion.py helmert.py
+python -m flake8 .
 ```
 
 Testing should also be performed inside a supported QGIS installation because
@@ -223,3 +223,22 @@ This project is licensed under the **GNU General Public License v3.0**. See the
 This software is provided without warranty. Users are responsible for
 verifying input data, adjustment settings, numerical results, coordinate
 reference systems, and final deliverables.
+
+## Release 3.1.1
+
+Corrected repository metadata, the license filename, dependency declarations,
+Qt enum syntax and local file URLs. Fixed leveling covariance matrices and
+the recovery of Helmert parameter covariance with large planar coordinates.
+Fixed the association of benchmark elevations and coordinates with station
+identifiers, including the inverse elevation-difference convention.
+The similarity and affine transformation models remain unchanged.
+
+NumPy must be installed in the Python environment used by QGIS. Standard
+QGIS distributions normally include it. SciPy is optional; install it in the
+same environment for full statistical quantiles rather than approximations.
+No packages are downloaded or installed by the plugin.
+
+Validation for this release: default Flake8, Python compilation and headless
+PyQGIS 3.40.6 checks of plugin loading, dialog creation, leveling adjustment,
+Helmert 4p/6p covariance and error ellipses. This does not replace interactive
+testing on the QGIS versions and operating systems used for distribution.

@@ -2,30 +2,33 @@
 name=Análisis Topográfico
 qgisMinimumVersion=3.16
 qgisMaximumVersion=3.99
-description=Topographic leveling network adjustment by least squares (Gaus-Markov method).
-about=QGIS plugin for adjusting topographic leveling networks by the least squares method (Gaus-Markov). It performs data validation, computes adjusted elevations, residuals, posteriori variance, chi-square test, confidence intervals and Baarda data snooping, and generates a professional HTML report with a scaled network sketch. Supports optional UTM coordinates to display results on the map. Exports results to GeoPackage and CSV.
-version=2.2.0
+description=Least-squares leveling adjustment and 2D Helmert transformations.
+about=Adjusts differential leveling networks using the Gauss-Markov model and performs 4-parameter similarity and 6-parameter affine transformations.
+    Includes residuals, covariance matrices, confidence intervals, control-point error ellipses, HTML reports, CSV and GeoPackage exports, and the QGIS CRS selector.
+    Requires NumPy in the Python environment used by QGIS. SciPy is optional; internal statistical approximations are used when it is unavailable.
+    Designed for planar survey coordinates in metres. Coordinate transformations are fitted models, not replacements for geodetic datum operations.
+version=3.1.1
 author=Raul Viquez
 email=viquezr@gmail.com
-tags=topography,leveling,least squares,gaus-markov,adjustment,surveying,geodesy
-changelog=2.2.0
-  - Corrected variance-covariance matrices (Q_vv, Q_lhat)
-  - Added UTM coordinate detection and scaled network sketch
-  - Added GeoPackage and CSV export
-  - Added technical metadata and quality control semaphore
-  - Improved HTML report layout
-
-[author]
-name=Raul Viquez
-email=viquezr@gmail.com
-
-[repository]
-type=GitHub
-url=https://github.com/viquezr-dev/analisis_nivelacion
-
-[tracker]
-type=GitHub
-url=https://github.com/viquezr-dev/analisis_nivelacion/issues
-
-[homepage]
-url=https://github.com/viquezr-dev/analisis_nivelacion
+homepage=https://github.com/viquezr-dev/AnalisisTopografico
+repository=https://github.com/viquezr-dev/AnalisisTopografico
+tracker=https://github.com/viquezr-dev/AnalisisTopografico/issues
+icon=icon.png
+category=Vector
+license=GPL-3.0-only
+experimental=False
+deprecated=False
+server=False
+hasProcessingProvider=False
+tags=topography,leveling,least squares,gauss-markov,helmert,adjustment,surveying,geodesy
+changelog=3.1.1
+    - Corrected plugin metadata, license filename and release version.
+    - Declared NumPy and optional SciPy dependencies.
+    - Updated Qt enum syntax and portable local-file opening.
+    - Fixed leveling covariance and stabilized Helmert parameter covariance.
+    - Associated benchmark elevations and coordinates with station IDs.
+    - Corrected Flake8 end-of-file formatting.
+    3.1
+    - Added Helmert transformations, confidence ellipses and QGIS CRS selection.
+    2.2.0
+    - Added reports, coordinate detection, GeoPackage and CSV export.
